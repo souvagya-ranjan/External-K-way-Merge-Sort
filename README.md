@@ -61,7 +61,7 @@ input dataset). No additional disk space can be used.
 ```bash
     python3 file_generator.py <seed> <num_words>
 ```
-    The above command will create a file named random.txt with num_words number of words. The seed is specified such that each time the same input is produced. This is to ensure that the output of your program is consistent.
+The above command will create a file named random.txt with num_words number of words. The seed is specified such that each time the same input is produced. This is to ensure that the output of your program is consistent.
 4. To compile the program, run the following command:
 ```bash
     g++ -std=c++11 main.cpp -O3 -o main 
@@ -70,4 +70,4 @@ input dataset). No additional disk space can be used.
 ```bash
     ./main <input_file> <output_file> <num_keys> <k> <num_merges>
 ```
-    The above command will run the program with the specified arguments. The input_file is the file that contains the input data. The output_file is the file where the sorted output will be written. The num_keys is the number of keys that need to be sorted. The k is the maximum fanout of the merges that are allowed. The num_merges is the number of merges that need to be performed. If num_merges is 0, then the program will run until the final sorted output is produced. If num_merges is greater than 0, then the program will stop after performing num_merges number of merges.
+The above command will run the program with the specified arguments. The input_file is the file that contains the input data. The output_file is the file where the sorted output will be written. The num_keys is the number of keys that need to be sorted. The k is the maximum fanout of the merges that are allowed. The num_merges is the number of merges that need to be performed. If num_merges is 0, then the program will run until the final sorted output is produced. If num_merges is greater than 0, then the program will stop after performing num_merges number of merges.
