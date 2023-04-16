@@ -1,0 +1,272 @@
+\documentclass{article}
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+\usepackage{subcaption}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{listings}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{enumitem}
+
+% Define colors for SQL code
+\definecolor{cppbg}{RGB}{240,240,240}
+\definecolor{cppkeyword}{RGB}{0,0,255}
+\definecolor{cppstring}{RGB}{255,0,0}
+
+% Define C++ code style
+\lstdefinestyle{cpp}{
+  backgroundcolor=\color{cppbg},
+  basicstyle=\ttfamily\small,
+  breakatwhitespace=true,
+  breaklines=true,
+  captionpos=b,
+  commentstyle=\color{gray},
+  keywordstyle=\color{cppkeyword},
+  language=C++,
+  morekeywords={int, double, char, bool, if, else, while, for, switch, case, default, class, public, private},
+  numbers=left,
+  numbersep=5pt,
+  numberstyle=\tiny\color{gray},
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  stringstyle=\color{cppstring},
+  tabsize=2,
+}
+
+
+\begin{document}
+\begin{titlepage}
+    \begin{center}
+        \includegraphics[width=0.6\textwidth]{logo.jpg}~\\[1.6cm]
+    
+        \HRule \\[0.4cm]
+        { \LARGE 
+          \textbf{Assignment report for COL362(DBMS)}\\[0.4cm]
+          \emph{External K-way Merge Sorting}\\[0.4cm]
+        }
+        \HRule \\[1.5cm]
+        
+        
+        { \large
+            \textbf{Prof. Srikanta Bedathur}\\ \\[0.1cm]
+            \vspace{20pt}
+            Prakhar Jagwani \\ 2019CS10382 \\
+            Souvagya Ranjan Sethi \\2019CS10405
+        }
+        
+        \vfill
+        
+        \textsc{\large Department of Computer Science \& Engineering}\\[0.4cm]
+        {\large \today}
+         
+    \end{center}
+\end{titlepage}
+
+\section{Implementation}
+    \subsection{Classes Defined}
+        \begin{itemize}
+            \item \textbf{Reader} \\ 
+                We have defined a \verb|Reader| class for reading the lines in the input. The Reader constructor takes two arguments: a \emph{filename} and a \emph{buffer size}. We set the buffer size of \verb|ifstream|, which can improve the performance of file reading. The Reader class provides a convenient and efficient way to read files line by line, and check for the end of the file.
+                
+                The $\neg$Reader() function is the class destructor, which deletes the buffer and closes the file stream.
+                
+                We also tried to manage the buffer manually, using \verb|fopen|, \verb|fread|, etc. calls, but using the \verb|ifstream| implementation remained faster.
+                
+            \item \textbf{Writer} \\
+                The Writer class is responsible for writing strings to a file. It takes a filename and buffer size as input parameters. It contains a buffer to temporarily store the strings before writing to the file, and a buffer\_pos variable to keep track of the current position in the buffer.
+            
+                The writeWord function takes a string as input, and writes it to the buffer. If the buffer is full, the function flushes the buffer to the file and resets buffer\_pos. The function also adds a newline character to the end of the string to separate each string in the file.
+                
+                The destructor of the class $\neg$Writer() flushes the remaining buffer to the file, and deletes the buffer and closes the file.
+            \item \textbf{TrieNode} \\ 
+                The class TrieNode represents a node in a trie data structure. Each node contains a pointer to its next sibling, its first child, and its parent, as well as the character associated with the node and a count of the number of times a word ends at this node. The size of a TrieNode object turns out to be 32 bytes. We can compress this a little by using 32 bit integers to index an array instead of using pointers. But we didn't do it because we didn't expect much improvement over using the classical sort.
+            
+                The getWord function returns the word represented by the node by traversing the parent pointers, starting from the current node, and storing each character in a buffer until the root node is reached. The buffer is then reversed and converted to a string, which is returned.
+                
+                The destructor recursively deletes the next and child nodes, if they exist, to avoid memory leaks.
+            \item \textbf{Trie}\\ 
+                The Trie data structure is used to store a large number of strings and sort them efficienctly. 
+                Each node in the Trie is a TrieNode structure defined above.  The Trie class contains a root pointer to the root TrieNode (which represents an empty string), as well as a size variable to keep track of the memory in use by the Trie as a whole.
+            
+                The Trie class has several member functions. insert function takes a string as input and inserts each character of the string into the Trie, creating new TrieNodes as needed. Each node in the Trie represents a unique string, and its count is incremented every time a string is inserted into the Trie.
+                
+                The firstNode and nextNode functions are used to traverse the Trie in a pre-order traversal. write\_to\_file function writes each unique string in the Trie to a file, in lexicographic order.
+                
+                When the size of the Trie exceeds a memory limit, it writes the Trie to a file and clears it.
+        \end{itemize}
+    \subsection{Functions Defined}
+        \begin{itemize}
+            \item \textbf{sort\_in\_runs(const string \&input\_file\_name, int key\_count)}
+                \begin{enumerate}[label=\star]
+                    \item \textbf{Description}: This function reads the input file and splits the contents into smaller chunks (runs), each containing a sorted subset of the data. The functions uses a vector to store the data. The \verb|MEM_LIMIT_MB| constant limits the amount of memory that can be used during the sorting process. The function returns the number of runs created. 
+                    \item \textbf{Key Points}: 
+                        \begin{enumerate}
+                            \item Initially, we reserve the memory for the vector so that subsequent insert into the vector doesn't require reallocation of memory every time.\\
+                            Here, we assume that the avg\_size of the key to be \verb|MAX_KEY_LENGTH / 2|.
+                            \item For each key, we check if the expected\_usage (the number of characters in memory and the memory allocated to the vector) doesn't exceed the \verb|MEM_LIMIT_MB|. If it exceeds, we write the vector into the temp file and clear the vector. 
+                        \end{enumerate}
+                \end{enumerate}
+            \item \textbf{merge\_runs(const vector $<$string$>$ \&sorted\_files, const int file\_count,
+                const string \&output\_file\_name)}
+                \begin{enumerate}[label = \star]
+                    \item \textbf{Description}: The function \verb|merge_runs| takes in a vector of sorted file names (\verb|sorted_files|), the number of files (\verb|file_count|), and an output file name (\verb|output_file_name|), and merges the sorted files into a single sorted file.
+
+                    It works by reading the first word of each file and finding the smallest word among them. The smallest word is written to the output file, and then the next word is read from the file that contained the smallest word. This process is repeated until all the files have been fully read and merged. 
+                    \item \textbf{Key Points}: 
+                        \begin{enumerate}
+                            % \item We store the pointer of the Reader class for each sorted file we want to merge in a vector and reserve memory space for it initially.
+                            % \item We keep a array completed which records if a input file for merge is completed or not. The coumpleted\_count keeps a count of the completed files.
+                            \item We are iterating over a vector of size \verb|k| before writing each word. Size \verb|k| is small, we assumed that using a heap may not yield any benefit.
+                            \item The Writer maintains a buffer of size \verb|FILE_BUFFER_SIZE| and when the buffer gets filled, it writes the buffer into the output file and clears the buffer.
+                        \end{enumerate}
+                \end{enumerate}
+            \item \textbf{external\_merge\_stop\_withstop(const char *input, const char *output,
+                                 const long key\_count, const int k = 2,
+                                 const int num\_merges = 0)}
+                \begin{enumerate}[label=\star]
+                    \item \textbf{Description}: The function external\_merge\_stop\_withstop performs an external sorting of a large input file containing strings as key by dividing it into smaller sorted runs, and then merging those runs into larger sorted runs until all runs are merged into a single output file.  
+                    
+                    % The function uses a k-way merge algorithm, where k is a user-defined parameter. The number of merges can also be specified as a parameter or set to 0 for unlimited merges. 
+                    The function sorts the input file using either a trie-based or a run-based sorting algorithm.
+                    % The sorted runs are stored in temporary files on disk, and the merging of runs is performed using a merge sort algorithm. The function also measures the time taken to sort and merge the runs and prints it to the console. 
+                    
+                    % If the input file is empty, the function creates an empty output file. If the input file contains only one run, the function renames the temporary file to the output file. If the number of runs is larger than one, the function merges the runs into larger runs until there is only one run left. Finally, the function returns the number of merges performed. 
+                    \item \textbf{Key Points}: 
+                        \begin{enumerate}
+%                             \item To calculate time, we have chrono library.
+%                             \begin{lstlisting}[style = cpp]
+% auto time = std::chrono::high_resolution_clock::now();
+%                             \end{lstlisting}
+                            % \item It first reads the files and sorts the individual chunks using \emph{sort\_in\_runs()} function.
+                            % \item It then merges the runs into 1 files using the merge\_runs() function. In each merge step, it merges at most k runs from the remaining runs to be merged in that stage.
+                            % \item Once all the runs in a stage are merged, the stage is incremented.
+                            % \item We keep a count of runs in each stage of the k-way merge. The stage number and run number of each stage are used to identify the output file name for each stage.
+                            \item We continue merging until the runs are merged into 1 file or we exceed the merge\_count limit.
+                            \item If the input file is empty, the function creates an empty output file. If the input file contains only one run, the function renames the temporary file to the output file. If the number of runs is larger than one, the function merges the runs into larger runs until there is only one run left. Finally, the function returns the number of merges performed. 
+                            \item Also, during writing output into the merged file, we check if there is only one file to merge (j == 1) and if the \verb|USE_SYMLINK| flag is set to true, and if the output file is not being written to directly (\verb|writing_to_output == false|). If all these conditions are true, a symbolic link is created from the single input file to the output file, which is an efficient operation that does not involve copying the file. If any of the conditions are false, or if creating the symbolic link fails, the merge\_runs function is called to copy the input file to the output file. 
+                            \begin{lstlisting}[style = cpp]
+if (j == 1 && USE_SYMLINK && !writing_to_output) {
+  remove(merged_file_name.c_str());
+  // expensive copy, create symlink instead
+  if (symlink(sorted_files[0].c_str(), merged_file_name.c_str()) != 0) {
+    // can't create symlink, copy
+    merge_runs(sorted_files, j, merged_file_name);
+  }
+}else {
+  if (j > 1) {
+    merge_count++;
+  }
+  merge_runs(sorted_files, j, merged_file_name);
+}
+                            \end{lstlisting}
+                        \end{enumerate}
+                \end{enumerate}
+                                 
+        \end{itemize}
+\section{Evaluation}
+\subsection{Environment}
+A Ubuntu 16.04 Server Edition VM with 1GB RAM, 1CPU and 40GB Virtual HD (on an HDD).
+\subsection{Data}
+Provided test data: \verb|english-subset.txt| and \verb|random.txt|.\\
+Generated test data: \verb|random10M.txt| 10 million strings with random ascii characters.
+\subsection{Memory limit}
+\begin{lstlisting}[style = cpp]
+g++ --std=c++17 main.cpp -O3 -DUSE_MEM_LIMIT=$MB
+\end{lstlisting}
+The maximum number of bytes that can be fit in memory was varied. Value of $k$ was set to $8$ and reader/writer buffer sizes were set to \verb|1MB|.
+\begin{center}
+\begin{tabular}{||c| c c c||} 
+ \hline
+&&Time(s)&\\
+ \hline
+ Memory Limit (MB) & english-subset.txt & random.txt & random10.txt \\ [0.5ex] 
+ \hline\hline
+ 16 & 0.83 & 38.66 & 582.89 \\ 
+ \hline
+ 64 & 0.70 & 20.17 & 551.42 \\
+ \hline
+ 512 & 0.69 & 10.65 & 363.13\\ %[1ex] 
+ \hline
+\end{tabular}
+\end{center}
+For a smaller memory limit, we fit less number of strings in memory before sorting. Hence, the number of chunks are large. Since, disk i/o is of the order $log_k(num\_chunks)*size\_of\_input$, the program is slower.
+\subsection{Read/Write Buffer}
+\begin{lstlisting}[style = cpp]
+g++ --std=c++17 main.cpp -O3 -DFILE_BUFFER_SIZE=$BYTES
+\end{lstlisting}
+Buffer sizes of the reader and writer objects were varied. Memory limit was set to dynamic (60\% of available memory) and k was set to $8$.
+\begin{center}
+\begin{tabular}{||c| c c c||} 
+ \hline
+&&Time(s)&\\
+ \hline
+ Buffer Size (KB) & english-subset.txt & random.txt & random10.txt \\ [0.5ex] 
+ \hline\hline
+ 16 & 0.64 & 19.32 & 459.11 \\ 
+ \hline
+ 512 & 0.65 & 16.25 & 426.92 \\
+ \hline
+ 1024 & 0.80 & 15.64 & 387.82\\ %[1ex] 
+ \hline
+ 4096 & 0.82 & 17.53 & 422.33\\ %[1ex] 
+ \hline
+ 8192 & 0.68 & 15.06 & 401.05\\ %[1ex] 
+ \hline
+\end{tabular}
+\end{center}
+The buffer size decreases up to a point (\verb|1MB| here). There is not a lot of change on further decrease. It decreases because we are writing less frequently and hence, the number of seeks should be less. For larger values, we do not see much difference because it is likely that data transfer becomes the bottleneck rather than the seek.
+\subsection{K}
+\begin{lstlisting}[style = cpp]
+g++ --std=c++17 main.cpp -O3
+\end{lstlisting}
+The maximum number of files that can me merged at one step was varied. Memory limit was set to dynamic (60\% of available memory) and buffer sizes were set to \verb|1MB|. Only tested on \verb|random10.txt|, because other files are too small to require a merge phase.
+\begin{center}
+\begin{tabular}{||c c||} 
+ \hline
+K & Time(s) \\ [0.5ex] 
+ \hline\hline
+ 2 & 652 \\ 
+ \hline
+ 4 & 437 \\
+ \hline
+ 8 & 371\\ %[1ex] 
+ \hline
+ 16 & 244\\ %[1ex] 
+ \hline
+\end{tabular}
+\end{center}
+The disk i/o is of the order $log_k(num\_chunks)*size\_of\_input$. Hence, the runtime should decrease with increase in $k$.
+\subsection{Sorting Phase}
+\begin{lstlisting}[style = cpp]
+g++ --std=c++17 main.cpp -O3 -DUSE_TRIE=true
+\end{lstlisting}
+Sorting could be done using a trie. Memory limit was set to $128MB$, buffer sizes were set to \verb|1MB| and k was set to $8$. Only tested on \verb|english-subset.txt|.
+\begin{center}
+\begin{tabular}{||c c c||} 
+ \hline
+Sorting Method & Time(s) & Chunks \\ [0.5ex] 
+ \hline\hline
+ trie & 3.5 & 4\\ 
+ \hline
+ stl::sort & 0.6 &1\\ 
+ \hline
+\end{tabular}
+\end{center}
+Trie took a lot of memory and could only fit a fourth of the input file within a \verb|128MB| limit.
+\section{Final Parameters}
+From the analysis before, we decided to keep the following parameters as default for our code.
+\begin{center}
+\begin{tabular}{||c c||} 
+ \hline
+Parameter & Value \\ [0.5ex] 
+ \hline\hline
+ Sorting & stl::sort\\ 
+ \hline
+ Memory Limit & 60\% of available memory\\ 
+ \hline
+ Buffer Size & 1MB\\ 
+ \hline
+\end{tabular}
+\end{center}
+
+\end{document}
