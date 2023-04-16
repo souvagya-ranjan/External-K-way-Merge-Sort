@@ -1,13 +1,13 @@
 \documentclass{article}
 \usepackage[a4paper, total={6in, 8in}]{geometry}
 \usepackage{subcaption}
-\usepackage{graphicx} % Required for inserting images
+\usepackage{graphicx}
 \usepackage{listings}
 \usepackage{float}
 \usepackage{xcolor}
 \usepackage{enumitem}
 
-% Define colors for SQL code
+% Define colors for CPP code
 \definecolor{cppbg}{RGB}{240,240,240}
 \definecolor{cppkeyword}{RGB}{0,0,255}
 \definecolor{cppstring}{RGB}{255,0,0}
@@ -114,8 +114,6 @@
                     It works by reading the first word of each file and finding the smallest word among them. The smallest word is written to the output file, and then the next word is read from the file that contained the smallest word. This process is repeated until all the files have been fully read and merged. 
                     \item \textbf{Key Points}: 
                         \begin{enumerate}
-                            % \item We store the pointer of the Reader class for each sorted file we want to merge in a vector and reserve memory space for it initially.
-                            % \item We keep a array completed which records if a input file for merge is completed or not. The coumpleted\_count keeps a count of the completed files.
                             \item We are iterating over a vector of size \verb|k| before writing each word. Size \verb|k| is small, we assumed that using a heap may not yield any benefit.
                             \item The Writer maintains a buffer of size \verb|FILE_BUFFER_SIZE| and when the buffer gets filled, it writes the buffer into the output file and clears the buffer.
                         \end{enumerate}
@@ -125,22 +123,9 @@
                                  const int num\_merges = 0)}
                 \begin{enumerate}[label=\star]
                     \item \textbf{Description}: The function external\_merge\_stop\_withstop performs an external sorting of a large input file containing strings as key by dividing it into smaller sorted runs, and then merging those runs into larger sorted runs until all runs are merged into a single output file.  
-                    
-                    % The function uses a k-way merge algorithm, where k is a user-defined parameter. The number of merges can also be specified as a parameter or set to 0 for unlimited merges. 
                     The function sorts the input file using either a trie-based or a run-based sorting algorithm.
-                    % The sorted runs are stored in temporary files on disk, and the merging of runs is performed using a merge sort algorithm. The function also measures the time taken to sort and merge the runs and prints it to the console. 
-                    
-                    % If the input file is empty, the function creates an empty output file. If the input file contains only one run, the function renames the temporary file to the output file. If the number of runs is larger than one, the function merges the runs into larger runs until there is only one run left. Finally, the function returns the number of merges performed. 
                     \item \textbf{Key Points}: 
                         \begin{enumerate}
-%                             \item To calculate time, we have chrono library.
-%                             \begin{lstlisting}[style = cpp]
-% auto time = std::chrono::high_resolution_clock::now();
-%                             \end{lstlisting}
-                            % \item It first reads the files and sorts the individual chunks using \emph{sort\_in\_runs()} function.
-                            % \item It then merges the runs into 1 files using the merge\_runs() function. In each merge step, it merges at most k runs from the remaining runs to be merged in that stage.
-                            % \item Once all the runs in a stage are merged, the stage is incremented.
-                            % \item We keep a count of runs in each stage of the k-way merge. The stage number and run number of each stage are used to identify the output file name for each stage.
                             \item We continue merging until the runs are merged into 1 file or we exceed the merge\_count limit.
                             \item If the input file is empty, the function creates an empty output file. If the input file contains only one run, the function renames the temporary file to the output file. If the number of runs is larger than one, the function merges the runs into larger runs until there is only one run left. Finally, the function returns the number of merges performed. 
                             \item Also, during writing output into the merged file, we check if there is only one file to merge (j == 1) and if the \verb|USE_SYMLINK| flag is set to true, and if the output file is not being written to directly (\verb|writing_to_output == false|). If all these conditions are true, a symbolic link is created from the single input file to the output file, which is an efficient operation that does not involve copying the file. If any of the conditions are false, or if creating the symbolic link fails, the merge\_runs function is called to copy the input file to the output file. 
